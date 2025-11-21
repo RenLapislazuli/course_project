@@ -5,14 +5,12 @@
 #include <iterator>
 #include <utility>
 
+
 template<typename T> struct Vector {
 public:
     Vector() = default;
 
-    explicit Vector(size_t size): _capacity(size), _size(size), _data(new T[size]) {
-        for (size_t i = 0; i < size; ++i)
-            _data[i] = T();
-    }
+    explicit Vector(size_t size): _capacity(size), _size(size), _data(new T[size]) {}
 
     explicit Vector(size_t size, const T& value): _capacity(size), _size(size), _data(new T[size]) {
         for (size_t i = 0; i < size; ++i)
@@ -79,7 +77,7 @@ public:
     }
 
     void assign(std::initializer_list<T> init) {
-        Vector temp(init.first, init.last);
+        Vector temp(init.begin(), init.end());
         temp.swap(*this);
     }
 
@@ -131,14 +129,15 @@ public:
     }
 
     void reserve(size_t capacity) {
-        if (capacity > _capacity) {
-            T* new_data = new T[capacity];
-            for (size_t i = 0; i < _size; ++i)
-                new_data[i] = _data[i];
-            delete[] _data;
-            _data = new_data;
-            _capacity = capacity;
+        if (capacity <= _capacity) {
+            return;
         }
+        T* new_data = new T[capacity];
+        for (size_t i = 0; i < _size; ++i)
+            new_data[i] = _data[i];
+        delete[] _data;
+        _data = new_data;
+        _capacity = capacity;
     }
 
     size_t capacity() const {
@@ -227,7 +226,7 @@ public:
             ++size;
         }
         if (_size + size > _capacity) {
-            reserve(std::min(_capacity * 2 + 1, _size + size));
+            reserve(std::max(_capacity * 2 + 1, _size + size));
         }
         for (auto it = rg.begin(); it != rg.end(); ++it) {
             _data[_size] = *it;
@@ -236,11 +235,13 @@ public:
     }
 
     void insert(Iterator pos, const T& value) {
+        auto dif = pos - begin();
+        push_back(value);
+        pos = begin() + dif;
         while (pos < end()) {
-            std::swap(*pos, value);
+            std::swap(*pos, back());
             ++pos;
         }
-        push_back(value);
     }
 
     template<class R> void insert_range(Iterator it, R&& rg) {
@@ -250,7 +251,7 @@ public:
         }
         if (_size + size > _capacity) {
             auto dif = it - begin();
-            reserve(std::min(_capacity * 2 + 1, _size + size));
+            reserve(std::max(_capacity * 2 + 1, _size + size));
             it = begin() + dif;
         }
         for (auto it0 = end() - 1; it0 >= it; --it0) {
@@ -264,11 +265,8 @@ public:
 
     void resize(size_t size) {
         T* new_data = new T[size];
-        for (size_t i = 0; i < size; ++i) {
-            if (i < _size)
-                new_data[i] = _data[i];
-            else
-                new_data[i] = T();
+        for (size_t i = 0; i < std::min(_size, size); ++i) {
+            new_data[i] = _data[i];
         }
         _size = _capacity = size;
         delete[] _data;
